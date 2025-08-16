@@ -1,5 +1,6 @@
 import dspy
-from data_builder import DataBuilder
+
+from dspy_data import DataBuilder
 
 lm_studio_model_id = "huggingfacetb_smollm3-3b"
 
@@ -37,7 +38,10 @@ def sentiment_reward_function(args, pred: dspy.Prediction) -> float:
 
 predictor = dspy.ChainOfThought(ProductReview)
 builder = DataBuilder(
-    predictor=predictor, output_dir="review_dataset/", reward_fn=sentiment_reward_function
+    predictor=predictor,
+    output_dir="review_dataset/",
+    reward_fn=sentiment_reward_function,
+    num_threads=2,
 )
 
 reviews_to_process = [
@@ -48,12 +52,12 @@ reviews_to_process = [
 ]
 
 print("\n--- Generating 3 responses for each of the 4 reviews (12 total calls) ---")
-predictions = builder(examples=reviews_to_process, n=3, num_threads=4)
+predictions = builder(examples=reviews_to_process, n=3, dry_run=True)
 
 print(f"\n✅ Successfully generated {len(predictions)} predictions.")
 
 print("\n--- Generating 5 responses for a single review ---")
 single_review = {"review_text": "This is the pinnacle of human engineering."}
-predictions_single = builder(examples=single_review, n=5, num_threads=5)
+predictions_single = builder(examples=single_review, n=5, dry_run=True)
 
 print(f"\n✅ Successfully generated {len(predictions_single)} predictions for the single review.")

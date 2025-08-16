@@ -23,7 +23,7 @@ class DataBuilder(dspy.Module):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.wrapper = ScoreAndSaveWrapper(predictor, output_dir, reward_fn)
-        self.parallel = dspy.Parallel(num_threads=num_threads)
+        self.parallel = dspy.Parallel(num_threads=num_threads, provide_traceback=True)
 
     def forward(self, examples: list[dict] | dict, n: int = 1, *, dry_run: bool = False):
         """

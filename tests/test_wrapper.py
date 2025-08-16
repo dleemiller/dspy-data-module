@@ -139,7 +139,7 @@ def test_reward_exception_logged_and_reward_none(tmp_path, caplog):
 
 def test_trace_includes_completion_model_dump(tmp_path):
     class Resp:
-        def model_dump(self):
+        def to_dict(self):
             return {"text": "hello"}
 
     def predictor(**kwargs):

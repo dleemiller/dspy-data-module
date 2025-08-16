@@ -2,6 +2,7 @@ import json
 import logging
 import uuid
 from copy import deepcopy
+from pathlib import Path
 
 import dspy
 
@@ -12,7 +13,7 @@ class ScoreAndSaveWrapper(dspy.Module):
     def __init__(self, predictor, output_dir, reward_fn):
         super().__init__()
         self.predictor = predictor
-        self.output_dir = output_dir
+        self.output_dir = Path(output_dir)
         self.reward_fn = reward_fn
 
     def forward(self, **kwargs):
@@ -24,6 +25,9 @@ class ScoreAndSaveWrapper(dspy.Module):
             with dspy.context(lm=thread_local_lm):
                 prediction = self.predictor(**kwargs)
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             logger.warning(f"⚠️ Predictor failed for example {kwargs}: {e}")
             pass
 
@@ -37,7 +41,7 @@ class ScoreAndSaveWrapper(dspy.Module):
                     {
                         "prompt": interaction.get("prompt"),
                         "messages": interaction.get("messages"),
-                        "completion": response.model_dump() if response else None,
+                        "completion": response.to_dict() if response else None,
                     }
                 )
 
