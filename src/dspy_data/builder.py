@@ -1,11 +1,9 @@
-import json
 import logging
-import uuid
 from pathlib import Path
 
 import dspy
 
-from .dry_run_lm import mock_dspy_lm, TypeAwareDryRunLM
+from .dry_run_lm import DryRunLM, mock_dspy_lm
 from .wrapper import ScoreAndSaveWrapper
 
 logger = logging.getLogger(__name__)
@@ -27,30 +25,29 @@ class DataBuilder(dspy.Module):
         self.wrapper = ScoreAndSaveWrapper(predictor, output_dir, reward_fn)
         self.parallel = dspy.Parallel(num_threads=num_threads)
 
-    def forward(self, examples: list[dict] | dict, n: int = 1, *, dry_run:bool=False):
+    def forward(self, examples: list[dict] | dict, n: int = 1, *, dry_run: bool = False):
         """
         Generates a dataset by processing examples in parallel.
         """
         if isinstance(examples, dict):
             examples = [examples]
-        
+
         if n > 1 and not dry_run:
             logger.info(f"Generating {n} responses for each of the {len(examples)} unique examples...")
             examples = [ex for ex in examples for _ in range(n)]
         elif n > 1 and dry_run:
             logger.info("In dry_run mode, 'n' is ignored. Generating 1 response per unique example.")
 
-        logger.info(f"Starting dataset generation for {len(examples)} total examples using {num_threads} threads...")
+        logger.info(f"Starting dataset generation for {len(examples)} total examples...")
 
         exec_pairs = [(self.wrapper, ex) for ex in examples]
-        
-        
+
         predictions = []
         if dry_run:
-            with mock_dspy_lm(TypeAwareDryRunLM()):
+            with mock_dspy_lm(DryRunLM()):
                 predictions = self.parallel(exec_pairs)
         else:
             predictions = self.parallel(exec_pairs)
-        
+
         logger.info("Dataset generation complete.")
         return [p for p in predictions if p is not None]

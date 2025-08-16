@@ -1,10 +1,12 @@
+import json
 import logging
+import uuid
 from copy import deepcopy
 
 import dspy
 
-
 logger = logging.getLogger(__name__)
+
 
 class ScoreAndSaveWrapper(dspy.Module):
     def __init__(self, predictor, output_dir, reward_fn):
@@ -22,7 +24,7 @@ class ScoreAndSaveWrapper(dspy.Module):
             with dspy.context(lm=thread_local_lm):
                 prediction = self.predictor(**kwargs)
         except Exception as e:
-            logger.info(f"⚠️ Predictor failed for example {kwargs}: {e}")
+            logger.warning(f"⚠️ Predictor failed for example {kwargs}: {e}")
             pass
 
         interaction_history = thread_local_lm.history
@@ -31,11 +33,13 @@ class ScoreAndSaveWrapper(dspy.Module):
         if interaction_history:
             for interaction in interaction_history:
                 response = interaction.get("response")
-                simplified_trace.append({
-                    "prompt": interaction.get("prompt"),
-                    "messages": interaction.get("messages"),
-                    "completion": response.model_dump() if response else None,
-                })
+                simplified_trace.append(
+                    {
+                        "prompt": interaction.get("prompt"),
+                        "messages": interaction.get("messages"),
+                        "completion": response.model_dump() if response else None,
+                    }
+                )
 
         reward = None
         if self.reward_fn and prediction:
