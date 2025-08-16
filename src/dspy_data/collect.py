@@ -9,7 +9,7 @@ from .wrapper import ScoreAndSaveWrapper
 logger = logging.getLogger(__name__)
 
 
-class DataBuilder(dspy.Module):
+class Collect(dspy.Module):
     def __init__(self, predictor, output_dir, reward_fn=None, num_threads: int = 8):
         """
         Initializes the DataBuilder.

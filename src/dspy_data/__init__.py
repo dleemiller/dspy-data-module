@@ -1,4 +1,4 @@
-from .builder import DataBuilder
+from .collect import Collect
 from .rewards import build_format_reward
 
-__all__ = ["DataBuilder", "build_format_reward"]
+__all__ = ["Collect", "build_format_reward"]
