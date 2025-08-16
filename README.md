@@ -38,18 +38,18 @@ pip install dspy-data
 The `Collect` module generates training datasets by running DSPy programs and saving the inputs, outputs, traces, and rewards:
 
 ```python
-from dspy_data import Collect
+import dspy_data
 
 # Create a data collector
-collector = Collect(
+collect = dspy_data.Collect(
     predictor=your_dspy_module,
     output_dir="./training_data",
-    reward_fn=your_reward_function,
+    reward_fn=your_reward_function, # optional: for saving score
     num_threads=8
 )
 
-# Generate dataset
-predictions = collector.forward(examples, n=5)  # 5 responses per example
+# Generate dataset (saves prompts, inputs, responses to output_dir)
+collect(examples, n=5)  # 5 responses per example
 ```
 
 Features:
@@ -117,17 +117,17 @@ The GRPO (Generalized Reward-based Policy Optimization) workflow combines DSPy's
 
 ```python
 import dspy
-from dspy_data import Collect
+import dspy_data
 
 # Define a simple QA signature
 signature = dspy.Signature("question: str -> answer: str, confidence: float")
 predictor = dspy.Predict(signature)
 
 # Create collector
-collector = Collect(
+collect = dspy_data.Collect(
     predictor=predictor,
     output_dir="./qa_dataset",
-    reward_fn=lambda inputs, outputs: 1.0 if outputs.confidence > 0.8 else 0.0
+    reward_fn=... # scoring, eval
 )
 
 # Generate training data
@@ -136,7 +136,7 @@ examples = [
     {"question": "Explain quantum computing"},
 ]
 
-predictions = collector.forward(examples, n=3)  # 3 responses per question
+_ = collect(examples, n=3)  # 3 responses per question
 ```
 
 ### Format Reward Functions
@@ -202,18 +202,17 @@ optimizer = dspy.MIPROv2(
     init_temperature=1.0
 )
 
-# Assume you have train/val datasets
+# Assume you have train/val datasets, standard DSPy optimization
 optimized_program = optimizer.compile(predictor, trainset=train_data, valset=val_data)
 
-# 4. Generate training data with optimized prompts
-collector = Collect(
+# 4. Now save the optimizaed prompts for GRPO training
+collect = Collect(
     predictor=optimized_program,
     output_dir="./grpo_training_data",
-    reward_fn=task_reward
 )
 
 # Use dry run to generate formatted examples for GRPO
-training_examples = collector.forward(train_data, n=1, dry_run=True)
+training_examples = collect(train_data, n=1, dry_run=True)
 
 # 5. GRPO Training (using your GRPO implementation)
 def combined_reward(response_text):
