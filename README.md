@@ -27,8 +27,10 @@ DSPy Data provides utilities to bridge DSPy program optimization with language m
 
 ## Installation
 
+Clone the repo.
+
 ```bash
-pip install dspy-data
+pip install -e .
 ```
 
 ## Core Components
