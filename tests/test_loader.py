@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from dspy_data.loader import collected_stats, filter_collected, load_collected
+from dspy_data.loader import collected_stats, extract_tool_calls, filter_collected, load_collected
 
 
 @pytest.fixture
@@ -70,3 +70,58 @@ def test_collected_stats(sample_entries):
 
 def test_collected_stats_empty():
     assert collected_stats([]) == {"count": 0}
+
+
+def test_extract_tool_calls():
+    entry = {
+        "trajectory": {
+            "thought_0": "Let me compile",
+            "tool_name_0": "compile",
+            "tool_args_0": {"code": "x = 1"},
+            "observation_0": "Compilation successful.",
+            "thought_1": "Now test",
+            "tool_name_1": "test",
+            "tool_args_1": {"code": "x = 1"},
+            "observation_1": "Tests: 4/4 passed",
+        }
+    }
+    calls = extract_tool_calls(entry)
+    assert len(calls) == 2
+    assert calls[0]["tool_name"] == "compile"
+    assert calls[1]["tool_name"] == "test"
+    assert calls[0]["observation"] == "Compilation successful."
+
+
+def test_extract_tool_calls_no_trajectory():
+    assert extract_tool_calls({}) == []
+    assert extract_tool_calls({"trajectory": None}) == []
+
+
+def test_collected_stats_with_trajectory():
+    entries = [
+        {
+            "inputs": {},
+            "trace": [],
+            "trajectory": {
+                "tool_name_0": "compile",
+                "tool_name_1": "test",
+            },
+            "output": {"answer": "ok"},
+            "reward": 0.9,
+        },
+        {
+            "inputs": {},
+            "trace": [],
+            "trajectory": {
+                "tool_name_0": "compile",
+            },
+            "output": {"answer": "ok"},
+            "reward": 0.5,
+        },
+    ]
+    stats = collected_stats(entries)
+    assert stats["has_trajectory"] == 2
+    assert stats["tool_calls_total"] == 3
+    assert stats["tool_calls_mean"] == 1.5
+    assert stats["tools_used"]["compile"] == 2
+    assert stats["tools_used"]["test"] == 1

@@ -85,6 +85,34 @@ def filter_collected(
     return result
 
 
+def extract_tool_calls(entry: dict) -> list[dict]:
+    """Extract structured tool calls from a collected entry's trajectory.
+
+    Works with the ReAct trajectory dict format (tool_name_N, tool_args_N,
+    observation_N) captured by ScoreAndSaveWrapper.
+
+    Returns:
+        List of dicts with keys: thought, tool_name, tool_args, observation.
+    """
+    trajectory = entry.get("trajectory")
+    if not trajectory or not isinstance(trajectory, dict):
+        return []
+
+    calls = []
+    idx = 0
+    while f"tool_name_{idx}" in trajectory:
+        calls.append(
+            {
+                "thought": trajectory.get(f"thought_{idx}", ""),
+                "tool_name": trajectory.get(f"tool_name_{idx}", ""),
+                "tool_args": trajectory.get(f"tool_args_{idx}", {}),
+                "observation": trajectory.get(f"observation_{idx}", ""),
+            }
+        )
+        idx += 1
+    return calls
+
+
 def collected_stats(entries: list[dict]) -> dict:
     """Compute summary statistics over collected entries."""
     if not entries:
@@ -93,11 +121,23 @@ def collected_stats(entries: list[dict]) -> dict:
     rewards = [e["reward"] for e in entries if e.get("reward") is not None]
     has_output = sum(1 for e in entries if e.get("output") is not None)
     has_trace = sum(1 for e in entries if e.get("trace"))
+    has_trajectory = sum(1 for e in entries if e.get("trajectory"))
+
+    # Tool usage stats
+    all_tool_calls = []
+    tools_per_entry = []
+    for e in entries:
+        calls = extract_tool_calls(e)
+        all_tool_calls.extend(calls)
+        tools_per_entry.append(len(calls))
+
+    tool_names = [c["tool_name"] for c in all_tool_calls]
 
     stats = {
         "count": len(entries),
         "has_output": has_output,
         "has_trace": has_trace,
+        "has_trajectory": has_trajectory,
     }
 
     if rewards:
@@ -109,5 +149,10 @@ def collected_stats(entries: list[dict]) -> dict:
                 "reward_max": round(max(rewards), 4),
             }
         )
+
+    if all_tool_calls:
+        stats["tool_calls_total"] = len(all_tool_calls)
+        stats["tool_calls_mean"] = round(sum(tools_per_entry) / len(tools_per_entry), 1)
+        stats["tools_used"] = dict(sorted({t: tool_names.count(t) for t in set(tool_names)}.items()))
 
     return stats

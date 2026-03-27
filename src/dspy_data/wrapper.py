@@ -10,6 +10,17 @@ import dspy
 logger = logging.getLogger(__name__)
 
 
+def _serialize(value):
+    """Make a value JSON-serializable."""
+    if isinstance(value, str | int | float | bool | type(None)):
+        return value
+    if isinstance(value, dict):
+        return {k: _serialize(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return [_serialize(v) for v in value]
+    return str(value)
+
+
 class ScoreAndSaveWrapper(dspy.Module):
     def __init__(self, predictor, output_dir, reward_fn, *, output_format="json"):
         """Wraps a DSPy predictor to capture traces and save results.
@@ -67,9 +78,17 @@ class ScoreAndSaveWrapper(dspy.Module):
             except Exception as e:
                 logger.warning(f"Reward function failed for example {kwargs}: {e}")
 
+        # Capture structured trajectory from ReAct modules (tool_name_N, tool_args_N, observation_N)
+        trajectory = None
+        if prediction is not None:
+            raw_traj = getattr(prediction, "trajectory", None)
+            if isinstance(raw_traj, dict):
+                trajectory = {k: _serialize(v) for k, v in raw_traj.items()}
+
         output_data = {
             "inputs": kwargs,
             "trace": simplified_trace,
+            "trajectory": trajectory,
             "output": dict(prediction) if prediction else None,
             "reward": reward,
         }
