@@ -1,7 +1,13 @@
 from .collect import Collect
 from .loader import collected_stats, extract_tool_calls, filter_collected, load_collected
 from .rewards import build_format_reward
-from .sft import extract_messages, to_hf_dataset, to_sft_examples, trajectory_to_messages
+from .sft import (
+    extract_messages,
+    extract_metrics,
+    to_hf_dataset,
+    to_sft_examples,
+    trajectory_to_messages,
+)
 
 __all__ = [
     "Collect",
@@ -9,6 +15,7 @@ __all__ = [
     "collected_stats",
     "extract_tool_calls",
     "extract_messages",
+    "extract_metrics",
     "filter_collected",
     "load_collected",
     "to_hf_dataset",

@@ -6,6 +6,7 @@ with proper tool_calls/tool roles for use with TRL's SFTTrainer.
 """
 
 import logging
+import re
 
 from .loader import extract_tool_calls
 
@@ -134,6 +135,49 @@ def extract_messages(entry: dict) -> list[dict]:
     return messages
 
 
+def extract_metrics(entry: dict) -> dict:
+    """Parse reward metrics from the last evaluate_cython observation.
+
+    Extracts speedup, annotation score, test pass rate, etc. from the
+    markdown-formatted tool output.
+    """
+    calls = extract_tool_calls(entry)
+    if not calls:
+        return {}
+
+    # Find last observation that has results (not just compilation errors)
+    observation = ""
+    for call in reversed(calls):
+        obs = call.get("observation", "")
+        if "## Benchmark" in obs or "## Tests" in obs or "## Annotation" in obs:
+            observation = obs
+            break
+
+    if not observation:
+        return {}
+
+    metrics = {}
+
+    # Speedup
+    m = re.search(r"Speedup:\s*([\d.]+)x", observation)
+    if m:
+        metrics["speedup"] = float(m.group(1))
+
+    # Annotation score
+    m = re.search(r"Annotation score:\s*([\d.]+)", observation)
+    if m:
+        metrics["annotation_score"] = float(m.group(1))
+
+    # Tests
+    m = re.search(r"Tests:\s*(\d+)/(\d+)\s*passed", observation)
+    if m:
+        metrics["tests_passed"] = int(m.group(1))
+        metrics["tests_total"] = int(m.group(2))
+        metrics["correctness"] = int(m.group(1)) / int(m.group(2)) if int(m.group(2)) > 0 else 0.0
+
+    return metrics
+
+
 def to_sft_examples(
     entries: list[dict],
     *,
@@ -145,6 +189,7 @@ def to_sft_examples(
     final_answer_key: str = "cython_code",
     include_thoughts: bool = True,
     metadata_keys: list[str] | None = None,
+    include_metrics: bool = False,
 ) -> list[dict]:
     """Convert collected entries to SFT training examples.
 
@@ -159,6 +204,7 @@ def to_sft_examples(
         final_answer_key: Output field key for final answer.
         include_thoughts: Include ReAct thoughts in assistant messages.
         metadata_keys: Input field names to include as extra columns.
+        include_metrics: Parse and include reward breakdown (speedup, annotation, tests).
 
     Returns:
         List of dicts with 'messages' key (and 'tools', 'reward', metadata if provided).
@@ -193,6 +239,8 @@ def to_sft_examples(
             inputs = entry.get("inputs", {})
             for key in metadata_keys:
                 example[key] = inputs.get(key, "")
+        if include_metrics:
+            example.update(extract_metrics(entry))
         examples.append(example)
 
     return examples
