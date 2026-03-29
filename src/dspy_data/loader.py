@@ -131,7 +131,7 @@ def collected_stats(entries: list[dict]) -> dict:
         all_tool_calls.extend(calls)
         tools_per_entry.append(len(calls))
 
-    tool_names = [c["tool_name"] for c in all_tool_calls]
+    tool_names = [c["tool_name"] for c in all_tool_calls if c.get("tool_name")]
 
     stats = {
         "count": len(entries),
