@@ -144,6 +144,7 @@ def to_sft_examples(
     user_prompt_fn=None,
     final_answer_key: str = "cython_code",
     include_thoughts: bool = True,
+    metadata_keys: list[str] | None = None,
 ) -> list[dict]:
     """Convert collected entries to SFT training examples.
 
@@ -157,9 +158,10 @@ def to_sft_examples(
         user_prompt_fn: User prompt formatter for trajectory_to_messages.
         final_answer_key: Output field key for final answer.
         include_thoughts: Include ReAct thoughts in assistant messages.
+        metadata_keys: Input field names to include as extra columns.
 
     Returns:
-        List of dicts with 'messages' key (and 'tools', 'reward' if provided).
+        List of dicts with 'messages' key (and 'tools', 'reward', metadata if provided).
     """
     examples = []
     for entry in entries:
@@ -187,6 +189,10 @@ def to_sft_examples(
             example["tools"] = tools
         if include_reward:
             example["reward"] = reward
+        if metadata_keys:
+            inputs = entry.get("inputs", {})
+            for key in metadata_keys:
+                example[key] = inputs.get(key, "")
         examples.append(example)
 
     return examples

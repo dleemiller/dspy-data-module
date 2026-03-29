@@ -84,7 +84,10 @@ def cmd_build_sft(args):
     if args.include_reward:
         sft_kwargs["include_reward"] = True
 
-    # Build SFT examples
+    # Build SFT examples with metadata columns from inputs
+    metadata_keys = [k.strip() for k in args.metadata_keys.split(",")] if args.metadata_keys else []
+    sft_kwargs["metadata_keys"] = metadata_keys
+
     examples = to_sft_examples(entries, **sft_kwargs)
     logger.info(f"Built {len(examples)} SFT examples")
 
@@ -162,6 +165,11 @@ def main():
         "--no-thoughts", action="store_true", help="Exclude ReAct thoughts from messages"
     )
     p_sft.add_argument("--include-reward", action="store_true", help="Include reward column in dataset")
+    p_sft.add_argument(
+        "--metadata-keys",
+        default=None,
+        help="Comma-separated input field names to include as columns (e.g., func_name,description)",
+    )
 
     args = parser.parse_args()
 
