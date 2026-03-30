@@ -85,6 +85,17 @@ class ScoreAndSaveWrapper(dspy.Module):
             if isinstance(raw_traj, dict):
                 trajectory = {k: _serialize(v) for k, v in raw_traj.items()}
 
+        # Extract reasoning_content from LM history (thinking models)
+        if trajectory and interaction_history:
+            for idx, interaction in enumerate(interaction_history):
+                response = interaction.get("response")
+                if response is None:
+                    continue
+                for choice in getattr(response, "choices", []):
+                    rc = getattr(getattr(choice, "message", None), "reasoning_content", None)
+                    if rc:
+                        trajectory[f"reasoning_{idx}"] = rc
+
         output_data = {
             "inputs": kwargs,
             "trace": simplified_trace,
