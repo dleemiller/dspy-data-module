@@ -73,8 +73,13 @@ def trajectory_to_messages(
                 }
             ],
         }
-        if include_thoughts and call.get("thought"):
-            assistant_msg["content"] = call["thought"]
+        if include_thoughts:
+            parts = []
+            if call.get("reasoning"):
+                parts.append(f"<think>\n{call['reasoning']}\n</think>")
+            if call.get("thought"):
+                parts.append(call["thought"])
+            assistant_msg["content"] = "\n".join(parts) if parts else None
         else:
             assistant_msg["content"] = None
 

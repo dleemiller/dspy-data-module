@@ -101,14 +101,16 @@ def extract_tool_calls(entry: dict) -> list[dict]:
     calls = []
     idx = 0
     while f"tool_name_{idx}" in trajectory:
-        calls.append(
-            {
-                "thought": trajectory.get(f"thought_{idx}", ""),
-                "tool_name": trajectory.get(f"tool_name_{idx}", ""),
-                "tool_args": trajectory.get(f"tool_args_{idx}", {}),
-                "observation": trajectory.get(f"observation_{idx}", ""),
-            }
-        )
+        call = {
+            "thought": trajectory.get(f"thought_{idx}", ""),
+            "tool_name": trajectory.get(f"tool_name_{idx}", ""),
+            "tool_args": trajectory.get(f"tool_args_{idx}", {}),
+            "observation": trajectory.get(f"observation_{idx}", ""),
+        }
+        reasoning = trajectory.get(f"reasoning_{idx}")
+        if reasoning:
+            call["reasoning"] = reasoning
+        calls.append(call)
         idx += 1
     return calls
 
